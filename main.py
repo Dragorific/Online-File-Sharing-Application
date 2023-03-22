@@ -65,12 +65,11 @@ class Server:
         # Set up TCP socket
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.bind((host, port))
-        s.listen()  # Listen for incoming connections
 
         print(f"{time()}: Listening for TCP connections on host and port: {host}, {port}")
         try:
-            s.listen()
-            conn, addr = s.accept()  # Accept incoming connection
+            s.listen()                  # Listen for incoming connections
+            conn, addr = s.accept()     # Accept incoming connection
             print(f'{time()}: Connected to {addr}')
         except:
             print(f"{time()}: Server socket {s} is closed.")
@@ -110,7 +109,12 @@ class Server:
                     # socket on this end.
                     print(f"{time()}: Error sending packets, closing the connection.")
                     conn.close()
-
+            elif data == b'\x02':
+                # 1. receive file name size
+                # 2. receive file name
+                # 3. receive file size 
+                # 4. receive file
+                continue
             elif data == b'\x03':
                 contents = os.listdir(Server.file_path)
                 print(f'{time()}: Client has requested a list of server directory.')
@@ -246,6 +250,11 @@ class Client:
                         elif(command_parts[0] == "put"):
                             # Put processing here
                             # Upload a file to the server
+                            # 1. Send command byte
+                            # 2. send filename size, 
+                            # 3. send filename, 
+                            # 4. send file size, 
+                            # 5. send file.
          
                             print("Upload complete")
 
