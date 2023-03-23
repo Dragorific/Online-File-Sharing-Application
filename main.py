@@ -114,7 +114,25 @@ class Server:
                 # 2. receive file name
                 # 3. receive file size 
                 # 4. receive file
-                continue
+                try:
+                    data = conn.recv(1)                                     # receive file name size in bytes
+                    file_name_size = int.from_bytes(data, byteorder='big')  # turn into int
+                    data = conn.recv(file_name_size)                        # read the file name (str format)
+                    filename = data.decode('utf-8')
+                    data = conn.recv(8)  
+                    file_size = int.from_bytes(data, byteorder='big')       # get the file size as int
+                    data = conn.recv(file_size)
+                    data = data.decode('utf-8')
+                except:
+                    print(f'{time()}: Error receiving bytes from client. ')
+
+                try:    
+                    with open((Server.file_path + "\\" + filename), 'w') as f:
+                        f.write(data)
+                except:
+                    print(f'{time()}: Error writing to file of name: {filename}')            
+                
+                print(f'{time()}: Completed upload from client of file: {filename}')
             elif data == b'\x03':
                 contents = os.listdir(Server.file_path)
                 print(f'{time()}: Client has requested a list of server directory.')
@@ -248,16 +266,45 @@ class Client:
                             print("Download complete")
                             
                         elif(command_parts[0] == "put"):
+                            
                             # Put processing here
-                            # Upload a file to the server
-                            # 1. Send command byte
-                            # 2. send filename size, 
-                            # 3. send filename, 
-                            # 4. send file size, 
-                            # 5. send file.
-         
-                            print("Upload complete")
+                            cmd_bytes = Client.CMD[command_parts[0]]                                                # 1 byte for command
+                            file_name_size = len(command_parts[1].encode('utf-8')).to_bytes(1, byteorder='big')     # 1 byte for the size of the filename
+                            file_name = command_parts[1].encode('utf-8')                                            # some bytes representing the filename
+                            
+                            print(cmd_bytes, file_name_size, file_name)
 
+                            try:
+                                file = open((Client.file_path + "\\" + command_parts[1]), 'r').read() 
+                            except FileNotFoundError:
+                                print(f"{time()}: File not found, closing the connection...")
+                                self.client_socket.close()
+                            
+                            file = open((Client.file_path + "\\" + command_parts[1]), 'r').read()
+                            file_data = file.encode('utf-8')     
+                            file_size = len(file_data).to_bytes(8, byteorder='big')
+
+                            # Upload a file to the server
+
+                            # Send the filesize bytes first, then the file bytes itself
+                            try:
+                                print(f"{time()}: Uploading file: ", {command_parts[1]})
+                                # 1. Send command byte
+                                self.client_socket.sendall(cmd_bytes)
+                                # 2. send filename size, 
+                                self.client_socket.sendall(file_name_size)
+                                # 3. send filename, 
+                                self.client_socket.sendall(file_name)
+                                # 4. send file size, 
+                                self.client_socket.sendall(file_size)
+                                # 5. send file.
+                                self.client_socket.sendall(file_data)
+                                print("Upload complete")
+                            except socket.error:
+                                # If the client has closed the connection, close the
+                                # socket on this end.
+                                print(f"{time()}: Error sending packets, uploading incomplete...")
+                                self.client_socket.close()      
 
                 except socket.error:
                     print(f"{time()}: The server is not connected")
@@ -266,7 +313,7 @@ class Client:
 if __name__ == '__main__':
     roles = {'client': Client,'server': Server}
     parser = argparse.ArgumentParser()
-    defaultHost = ""        # change this to ur ipv4 address
+    defaultHost = "10.0.0.222"        # change this to ur ipv4 address
 
     parser.add_argument('-r', '--role', choices=roles, help='server or client role', required=True, type=str)
     parser.add_argument('--host', default=defaultHost, help="Server Host", type=str)
