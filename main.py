@@ -77,6 +77,7 @@ class Server:
                 decoded_data = data.decode('utf-8')
                 if(decoded_data == "SERVICE DISCOVERY"):
                     # Send a response packet back to the client
+                    print(f"{time()}: Responding to Service Discovery...")
                     response = b"Sama and Meena's File Sharing Server"
                     s.sendto(response, addr)
         except KeyboardInterrupt:
@@ -225,9 +226,10 @@ class Client:
                     try:
                         # Receive response from file sharing server using unicast
                         data, addr = broadcast_sock.recvfrom(1024)  # 1024 is the buffer size
-                        print(f'{time()}: Received response from file sharing server {addr}: {data}')
+                        print(f'{time()}: Received response from file sharing server {addr}')
                         # process the received response data here
-                        print(data.decode('utf-8'))
+                        data = data.decode('utf-8')
+                        print(f'{time()}: Response: {data}')
                         if data:
                             break
                     except socket.timeout:
